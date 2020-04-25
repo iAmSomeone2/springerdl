@@ -1,7 +1,14 @@
 # Ignore the build directory
-build/
-*-build-*/
+*build*/
 
 *links.txt
 
 out/
+
+# archives
+*.tar.*
+*.7z
+*.zip
+
+# log files
+*.log

@@ -8,3 +8,7 @@ target_link_libraries(bookdl CURL::libcurl Threads::Threads)
 
 add_executable(springerdl springerdl.c springerdl.h)
 target_link_libraries(springerdl bookdl)
+
+# Install directive
+install(TARGETS springerdl
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
