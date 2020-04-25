@@ -90,14 +90,17 @@ void *download_book(void *raw_bookdl_item) {
     __uint32_t dir_str_len = strlen(bookdl_item->out_dir);
     char* out_file_name = (char*)(malloc(sizeof(char) * (dir_str_len + ISBN_LEN + 6)));
     out_file_name[0] = '\0';
-    strncpy(out_file_name, bookdl_item->out_dir, dir_str_len);
+    strncpy(out_file_name, bookdl_item->out_dir, dir_str_len + 1);
     strncat(out_file_name, "/", 2);
     strncat(out_file_name, bookdl_item->isbn, ISBN_LEN);
     strncat(out_file_name, ".pdf", 5);
 
     // Open corresponding file.
     FILE* out_file = fopen(out_file_name, "w+b");
-    free(out_file_name);
+    if (out_file == NULL) {
+        fprintf(stderr, "Failed to create output file: %s\n", out_file_name);
+        return NULL;
+    }
 
     // Set up for the HTTP request for the file dl
     CURL* curl_handle = curl_easy_init();
@@ -109,13 +112,14 @@ void *download_book(void *raw_bookdl_item) {
 
     curl_easy_cleanup(curl_handle);
     fclose(out_file);
+    free(out_file_name);
     return NULL;
 }
 
 void download_all_books(__uint32_t array_len, bookdl_t* bookdl_array, __uint32_t thread_limit) {
     pthread_t* thread_pool = (pthread_t*)(malloc(sizeof(pthread_t) * thread_limit));
 
-
+    
 
     free(thread_pool);
 }
