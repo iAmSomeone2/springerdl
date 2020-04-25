@@ -23,8 +23,15 @@
 #include "springerdl.h"
 
 int main(int argc, char* argv[]) {
-    char* input_file_loc = NULL;
-    char* out_dir_loc = NULL;
+    // =========================
+    // OPTIONS SET-UP & HANDLING
+    // =========================
+
+    __uint8_t isDefaultInput = 1;
+    __uint8_t isDefaultOutput = 1;
+
+    char* input_file_loc = "./links.txt";
+    char* out_dir_loc = "./out";
     __uint32_t limit = 0;
     __uint32_t thread_limit = 1;
 
@@ -36,12 +43,22 @@ int main(int argc, char* argv[]) {
         TODO: fix segfault issue when no text is provided to options.
     */
     while((opt_result = getopt(argc, argv, OPTS)) != -1) {
+        __uint32_t loc_len = 0;
+        
+        if (optarg) {
+            loc_len = strlen(optarg);
+        }
+
         switch(opt_result) {
             case 'i':
-                input_file_loc = optarg;
+                input_file_loc = (char*)(malloc(sizeof(char) * loc_len));
+                strncpy(input_file_loc, optarg, loc_len);
+                isDefaultInput = 0;
                 break;
             case 'o':
-                out_dir_loc = optarg;
+                out_dir_loc = (char*)(malloc(sizeof(char) * loc_len));
+                strncpy(out_dir_loc, optarg, loc_len);
+                isDefaultOutput = 0;
                 break;
             case 'l':
                 limit = strtoul(optarg, NULL, 10);
@@ -62,23 +79,49 @@ int main(int argc, char* argv[]) {
     FILE* in_file = fopen(input_file_loc, "r");
     if (in_file == NULL) {
         fprintf(stderr, "Failed to open input file: '%s'\n", input_file_loc);
+
+        if (!isDefaultInput)
+            free(input_file_loc);
+        if (!isDefaultOutput)
+            free(out_dir_loc);
         return 1;
     }
+
+    // ====================
+    // MAIN EXECUTION LOGIC
+    // ====================
 
     __uint32_t num_urls = get_num_urls(in_file);
 
     printf("Number of links in file: %u\n", num_urls);
 
     bookdl_t* book_dls = (bookdl_t*)(malloc(sizeof(bookdl_t) * num_urls));
-    init_bookdl_array(num_urls, book_dls);
+    init_bookdl_array(num_urls, book_dls, out_dir_loc);
 
     get_orig_urls(in_file, num_urls, book_dls);
     fclose(in_file);
 
-    set_redirect_url(&book_dls[1]);
+    set_all_isbn_numbers(num_urls, book_dls);
+    generate_all_dl_urls(num_urls, book_dls);
 
+
+    if (limit <= 0 || limit > num_urls) {
+        limit = num_urls;
+    }
+
+    for (__uint32_t i = 0; i < limit; i++){
+        printf("Downloading book %u of %u\n", i+1, limit);
+        download_book((void*)&book_dls[i]);
+    }
+    
     free_bookdl_array(num_urls, book_dls);
     free(book_dls);
+
+    if (!isDefaultInput)
+        free(input_file_loc);
+    if (!isDefaultOutput)
+        free(out_dir_loc);
+
     return 0;
 }
 
@@ -122,8 +165,8 @@ void get_orig_urls(FILE* in_file, __uint32_t link_count, bookdl_t* bookdl_array)
             buff[line_len] = c;
             line_len++;
         } else {
-            bookdl_array[links_read].originalURL = (char*)(malloc(sizeof(char) * (line_len + 1)));
-            strncpy(bookdl_array[links_read].originalURL, buff, line_len);
+            bookdl_array[links_read].original_url = (char*)(malloc(sizeof(char) * (line_len + 1)));
+            strncpy(bookdl_array[links_read].original_url, buff, line_len);
             links_read++;
             line_len = 0;
         }

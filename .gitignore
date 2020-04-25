@@ -1,5 +1,5 @@
 # Ignore the build directory
 build/
-*-build/
+*-build-*/
 
-links.txt
+*links.txt

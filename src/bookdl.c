@@ -20,70 +20,102 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <pthread.h>
+
 #include <curl/curl.h>
 
 #include "bookdl.h"
 
-void init_bookdl_array(__uint32_t array_len, bookdl_t* bookdl_array) {
+void init_bookdl_array(__uint32_t array_len, bookdl_t* bookdl_array, char* out_dir) {
     for (__uint32_t i = 0; i < array_len; i++) {
-        bookdl_array[i].downloadURL = NULL;
-        bookdl_array[i].originalURL = NULL;
-        bookdl_array[i].redirectURL = NULL;
+        bookdl_array[i].dl_url = NULL;
+        bookdl_array[i].original_url = NULL;
+        bookdl_array[i].isbn[0] = '\0';
+        bookdl_array[i].out_dir = out_dir;
     }
 }
 
 void free_bookdl_array(__uint32_t array_len, bookdl_t* bookdl_array) {
     for (__uint32_t i = 0; i < array_len; i++) {
-        if (bookdl_array[i].downloadURL != NULL) {
-            free(bookdl_array[i].downloadURL);
+        if (bookdl_array[i].dl_url != NULL) {
+            free(bookdl_array[i].dl_url);
         }
-        if (bookdl_array[i].originalURL != NULL) {
-            free(bookdl_array[i].originalURL);
-        }
-        if (bookdl_array[i].redirectURL != NULL) {
-            free(bookdl_array[i].redirectURL);
+        if (bookdl_array[i].original_url != NULL) {
+            free(bookdl_array[i].original_url);
         }
     }
 }
 
-void set_redirect_url(bookdl_t* bookdl_item) {
-    CURL* curl = curl_easy_init();
-    CURLcode res;
-    long response_code;
-    char* redir_url;
+void set_isbn_number(bookdl_t* bookdl_item) {
+    strncpy(bookdl_item->isbn, bookdl_item->original_url + 50, ISBN_LEN);
+}
 
-    FILE* header_file = fopen(HEADER_FILE, "w+");
-    if (!header_file) {
-        fprintf(stderr, "Failed to open file to store headers.\n");
-        curl_easy_cleanup(curl);
-        return;
+void set_all_isbn_numbers(__uint32_t array_len, bookdl_t* bookdl_array) {
+    for (__uint32_t i = 0; i < array_len; i++) {
+        set_isbn_number(&bookdl_array[i]);
     }
+}
 
-    // Set the URL to be used in the call to CURL.
-    curl_easy_setopt(curl, CURLOPT_URL, bookdl_item->originalURL);
+void generate_dl_url(bookdl_t* bookdl_item) {
+    size_t target_url_size = BASE_URL_LEN + ISBN_LEN + 5;
 
-    curl_easy_setopt(curl, CURLOPT_HEADERDATA, header_file);
+    bookdl_item->dl_url = (char*)(malloc(sizeof(char) * target_url_size));
+    strncpy(bookdl_item->dl_url, BASE_DL_URL, BASE_URL_LEN);
+    strncat(bookdl_item->dl_url, bookdl_item->isbn, ISBN_LEN);
+    strncat(bookdl_item->dl_url, ".pdf", 5);
+}
 
-    res = curl_easy_perform(curl);
+void generate_all_dl_urls(__uint32_t array_len, bookdl_t* bookdl_array) {
+    for (__uint32_t i = 0; i < array_len; i++) {
+        generate_dl_url(&bookdl_array[i]);
+    }
+}
 
-    if (res != CURLE_OK) {
-        fprintf(stderr, "curl_easy_perfom() failed: %s\n", curl_easy_strerror(res));
-    } else {
-        res = curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
-        if ((res == CURLE_OK) && ((response_code / 100) != 3)) {
-            // Only 300's are redirects
-            fprintf(stderr, "Not a redirect.\n");
-        } else {
-            res = curl_easy_getinfo(curl, CURLINFO_REDIRECT_URL, &redir_url);
+void *download_book(void *raw_bookdl_item) {
+    bookdl_t* bookdl_item = (bookdl_t*)(raw_bookdl_item);
 
-            if ((res == CURLE_OK) && redir_url) {
-                size_t url_len = strlen(redir_url);
-                bookdl_item->redirectURL = (char*)(malloc(sizeof(char) * (url_len + 1)));
-                strncpy(bookdl_item->redirectURL, redir_url, url_len);
-            }
+    // Check if output directory exists.
+    struct stat* buff = (struct stat*)(malloc(sizeof(struct stat)));
+    if (stat(bookdl_item->out_dir, buff) != 0){
+        int result = mkdir(bookdl_item->out_dir, DIR_PERM);
+        if (result == -1) {
+            fprintf(stderr, "Failed to create output directory.");
+            free(buff);
+            abort();
         }
     }
+    free(buff);
 
-    fclose(header_file);
-    curl_easy_cleanup(curl);
+    // Generate filename based on book isbn
+    __uint32_t dir_str_len = strlen(bookdl_item->out_dir);
+    char* out_file_name = (char*)(malloc(sizeof(char) * (dir_str_len + ISBN_LEN + 6)));
+    out_file_name[0] = '\0';
+    strncpy(out_file_name, bookdl_item->out_dir, dir_str_len);
+    strncat(out_file_name, "/", 2);
+    strncat(out_file_name, bookdl_item->isbn, ISBN_LEN);
+    strncat(out_file_name, ".pdf", 5);
+
+    // Open corresponding file.
+    FILE* out_file = fopen(out_file_name, "w+b");
+    free(out_file_name);
+
+    // Set up for the HTTP request for the file dl
+    CURL* curl_handle = curl_easy_init();
+
+    curl_easy_setopt(curl_handle, CURLOPT_URL, bookdl_item->dl_url);
+    curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, out_file);
+
+    curl_easy_perform(curl_handle);
+
+    curl_easy_cleanup(curl_handle);
+    fclose(out_file);
+    return NULL;
+}
+
+void download_all_books(__uint32_t array_len, bookdl_t* bookdl_array, __uint32_t thread_limit) {
+    pthread_t* thread_pool = (pthread_t*)(malloc(sizeof(pthread_t) * thread_limit));
+
+
+
+    free(thread_pool);
 }
