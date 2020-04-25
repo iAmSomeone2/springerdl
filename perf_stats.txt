@@ -1,0 +1,37 @@
+ Performance counter stats for RELEASE 'src/springerdl -i ../https_links.txt -o ../out -l 30':
+
+          2,883.53 msec task-clock:u              #    0.160 CPUs utilized
+                 0      context-switches:u        #    0.000 K/sec
+                 0      cpu-migrations:u          #    0.000 K/sec
+               724      page-faults:u             #    0.251 K/sec
+     2,662,001,646      cycles:u                  #    0.923 GHz                      (84.19%)
+       122,359,645      stalled-cycles-frontend:u #    4.60% frontend cycles idle     (83.06%)
+       617,916,807      stalled-cycles-backend:u  #   23.21% backend cycles idle      (85.04%)
+     3,942,863,216      instructions:u            #    1.48  insn per cycle
+                                                  #    0.16  stalled cycles per insn  (82.52%)
+       629,324,375      branches:u                #  218.248 M/sec                    (82.74%)
+        12,038,860      branch-misses:u           #    1.91% of all branches          (82.45%)
+
+      18.016876701 seconds time elapsed
+
+       0.615255000 seconds user
+       1.761710000 seconds sys
+
+ Performance counter stats for DEBUG 'src/springerdl -i ../https_links.txt -o ../out -l 30':
+
+          2,959.66 msec task-clock:u              #    0.165 CPUs utilized
+                 0      context-switches:u        #    0.000 K/sec
+                 0      cpu-migrations:u          #    0.000 K/sec
+               725      page-faults:u             #    0.245 K/sec
+     2,615,080,310      cycles:u                  #    0.884 GHz                      (82.74%)
+       112,299,762      stalled-cycles-frontend:u #    4.29% frontend cycles idle     (83.30%)
+       610,131,731      stalled-cycles-backend:u  #   23.33% backend cycles idle      (84.25%)
+     3,821,025,092      instructions:u            #    1.46  insn per cycle
+                                                  #    0.16  stalled cycles per insn  (83.35%)
+       606,516,301      branches:u                #  204.928 M/sec                    (82.92%)
+        11,710,625      branch-misses:u           #    1.93% of all branches          (83.43%)
+
+      17.905701728 seconds time elapsed
+
+       0.553874000 seconds user
+       1.552755000 seconds sys

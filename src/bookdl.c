@@ -119,7 +119,7 @@ void *download_book(void *raw_bookdl_item) {
 void download_all_books(__uint32_t array_len, bookdl_t* bookdl_array, __uint32_t thread_limit) {
     pthread_t* thread_pool = (pthread_t*)(malloc(sizeof(pthread_t) * thread_limit));
 
-    
+
 
     free(thread_pool);
 }
