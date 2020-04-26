@@ -83,7 +83,7 @@ void generate_dl_url(bookdl_t* bookdl_item) {
     bookdl_item->dl_url = (char*)(calloc(target_url_size, sizeof(char)));
     strncpy(bookdl_item->dl_url, BASE_DL_URL, BASE_URL_LEN);
     strncat(bookdl_item->dl_url, bookdl_item->isbn, ISBN_LEN);
-    strncat(bookdl_item->dl_url, ".pdf", 4);
+    strncat(bookdl_item->dl_url, ".pdf", 5);
 }
 
 void generate_all_dl_urls(__uint32_t array_len, bookdl_t* bookdl_array) {
