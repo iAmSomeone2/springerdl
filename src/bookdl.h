@@ -27,11 +27,11 @@ static const int DIR_PERM = (S_IRWXU | S_IRWXG | S_IXOTH);
 
 static const char   BASE_DL_URL[] = "https://link.springer.com/content/pdf/10.1007%2F";
 static const size_t BASE_URL_LEN = 49;
-static const size_t ISBN_LEN = 19;
+static const size_t ISBN_LEN = 17;
 
 typedef struct bookdl {
     char*   original_url;
-    char    isbn[ISBN_LEN];
+    char*    isbn;
     char*   dl_url;
     char*   out_dir;
 } bookdl_t;
